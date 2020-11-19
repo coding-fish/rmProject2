@@ -17,7 +17,8 @@
 #include "threads/palloc.h"
 #include "threads/thread.h"
 #include "threads/vaddr.h"
-#include "lib/string.h"//需要调用字符串分离函数
+#include "lib/string.h"       //需要调用字符串分离函数
+#define MAX_ARGC 200          //假设一个命令行最多有200个参数
 
 static thread_func start_process NO_RETURN;
 static bool load (const char *cmdline, void (**eip) (void), void **esp);
@@ -37,7 +38,7 @@ process_execute (const char *file_name)
   fn_copy = palloc_get_page (0);
   if (fn_copy == NULL)
     return TID_ERROR;
-  strlcpy (fn_copy, file_name, PGSIZE);
+  strlcpy (fn_copy, file_name, PGSIZE);//但这里仍然用file_name
   char *file_part, *save_ptr;//传入file_name实际是文件名和后面的参数，需要把文件名分离出来
   file_part = strtok_r(file_name, " ", &save_ptr);//实际的文件名叫file_part
 
@@ -56,16 +57,29 @@ start_process (void *file_name_)
   char *file_name = file_name_;
   struct intr_frame if_;
   bool success;
+  /* 由于后面要用到命令行中的参数，因此这里将所有子串都分离出来 */
+  int argc = 0;                   //参数个数
+  char * argv[MAX_ARGC];          //存每个参数
+  char * save_ptr = NULL;
+  int i = 0;
+  for (argv[i] = strtok_r (s, " ", &save_ptr); argv[i] != NULL;
+  argv[i] = strtok_r (NULL, " ", &save_ptr))
+  {
+    i++;
+    // printf ("'%s'\n", argv[i]);
+  }
+  argc = i;
+  char* stack_pos[MAX_ARGC];    //存每个参数在栈上的位置
 
   /* Initialize interrupt frame and load executable. */
   memset (&if_, 0, sizeof if_);
   if_.gs = if_.fs = if_.es = if_.ds = if_.ss = SEL_UDSEG;
   if_.cs = SEL_UCSEG;
   if_.eflags = FLAG_IF | FLAG_MBS;
-  success = load (file_name, &if_.eip, &if_.esp);
+  success = load (argv[0], &if_.eip, &if_.esp);//文件名放在argv[0]中
 
   /* If load failed, quit. */
-  palloc_free_page (file_name);
+  palloc_free_page (file_name);//但这里仍然用file_name
   if (!success) 
     thread_exit ();
 
@@ -75,6 +89,35 @@ start_process (void *file_name_)
      arguments on the stack in the form of a `struct intr_frame',
      we just point the stack pointer (%esp) to our stack frame
      and jump to it. */
+  char* esp = (char*)if_.esp;       //以字节为单位移动，因此用char指针
+  for (i = argc-1; i >= 0; i--)
+  {
+    esp -= strlen(argv[i])+1;//有一个'\0'
+    memcpy(esp, argv[i], argv[i]+1);
+    stack_pos[i] = esp;             //存参数位置
+  }
+  while ((int)esp % 4)              //对齐
+    esp--;
+  esp -= 4;
+  *esp = 0;                         //argv[argc]
+  for (i = argc-1; i >= 0; i--)
+  {
+    esp -= 4;
+    *esp = (int*)stack_pos[i];      //每个地址是4字节
+  }
+  esp -= 4;
+  *esp = esp+4;                     //argv栈上地址
+  esp -= 4;
+  *esp = argc;                      //argc
+  esp -= 4;
+  *esp = 0;                         //return address
+
+  if_.esp = esp;                    //更新栈指针
+  /* 释放内存 */
+  free(argv);
+  palloc_free_page(file_name);
+
+
   asm volatile ("movl %0, %%esp; jmp intr_exit" : : "g" (&if_) : "memory");
   NOT_REACHED ();
 }
