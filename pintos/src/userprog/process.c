@@ -62,7 +62,7 @@ start_process (void *file_name_)
   char * argv[MAX_ARGC];          //存每个参数
   char * save_ptr = NULL;
   int i = 0;
-  for (argv[i] = strtok_r (s, " ", &save_ptr); argv[i] != NULL;
+  for (argv[i] = strtok_r (file_name, " ", &save_ptr); argv[i] != NULL;
   argv[i] = strtok_r (NULL, " ", &save_ptr))
   {
     i++;
