@@ -89,7 +89,6 @@ struct thread
     uint8_t *stack;                     /* Saved stack pointer. */
     int priority;                       /* Priority. */
     struct list_elem allelem;           /* List element for all threads list. */
-    int ret;                            // 用户级进程的返回值
 
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
@@ -97,6 +96,7 @@ struct thread
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
     uint32_t *pagedir;                  /* Page directory. */
+    int ret;                            // 用户级进程的返回值
 #endif
 
     /* Owned by thread.c. */
