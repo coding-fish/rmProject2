@@ -156,6 +156,7 @@ process_exit (void)
          directory before destroying the process's page
          directory, or our active page directory will be one
          that's been freed (and cleared). */
+      printf("%s: exit(%d)\n", cur->name, cur->ret);//打印用户级进程返回值
       cur->pagedir = NULL;
       pagedir_activate (NULL);
       pagedir_destroy (pd);
