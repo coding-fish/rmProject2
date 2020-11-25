@@ -95,7 +95,12 @@ struct thread
 
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
+    tid_t parent_id;                    /* parent pid (tid) */
     uint32_t *pagedir;                  /* Page directory. */
+    struct list children;               /* child processes */
+    struct list fd_list;       /* List of all file_descriptor it owns*/
+    int exit_status;
+    struct file *executable;     /* The thread's executable*/
 #endif
 
     /* Owned by thread.c. */
@@ -138,4 +143,5 @@ void thread_set_nice (int);
 int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
 
+struct thread* get_thread_by_tid(tid_t id);
 #endif /* threads/thread.h */
