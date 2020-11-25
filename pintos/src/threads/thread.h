@@ -94,9 +94,14 @@ struct thread
     struct list_elem elem;              /* List element. */
 
 #ifdef USERPROG
-    /* Owned by userprog/process.c. */
-    uint32_t *pagedir;                  /* Page directory. */
-    int ret;                            // 用户级进程的返回值
+   /* Owned by userprog/process.c. */
+   uint32_t *pagedir;                  /* Page directory. */
+   int exit_status;                            // 用户级进程的返回值
+
+   tid_t parent_id;                    /* parent pid (tid) */
+   struct list children;               /* child processes */
+   struct list fd_list;                /* List of all file_descriptor it owns*/
+   struct file *executable;            /* The thread's executable*/
 #endif
 
     /* Owned by thread.c. */
@@ -139,4 +144,5 @@ void thread_set_nice (int);
 int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
 
+struct thread* get_thread_by_tid(tid_t id);
 #endif /* threads/thread.h */
